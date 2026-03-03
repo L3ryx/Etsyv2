@@ -19,6 +19,7 @@
 @keyframes smokeRise{0%{opacity:.8;transform:scale(1) translateY(0)}100%{opacity:0;transform:scale(2.5) translateY(-30px)}}
 @keyframes rocketShake{0%,100%{transform:translateY(0)}25%{transform:translateY(-2px)}75%{transform:translateY(2px)}}
 @keyframes flamePulse{0%,100%{opacity:1;transform:scaleY(1)}50%{opacity:.7;transform:scaleY(.8)}}
+@keyframes fadeSlideIn{0%{opacity:0;transform:translateY(15px)}100%{opacity:1;transform:translateY(0)}}
 
 body{
   font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
@@ -137,8 +138,9 @@ tr:hover{background:rgba(249,115,22,.03)}
   </div>
 
   <div class="tabs">
-    <button class="tab-btn active" onclick="switchMode('shop')">Analyser une boutique</button>
-    <button class="tab-btn" onclick="switchMode('category')">Analyser une categorie</button>
+    <button class="tab-btn active" onclick="switchMode('shop')">Boutique</button>
+    <button class="tab-btn" onclick="switchMode('category')">Categorie</button>
+    <button class="tab-btn" onclick="switchMode('keywords')">Mots-cles</button>
   </div>
 
   <div id="mode-shop" class="tab-content active">
@@ -211,13 +213,21 @@ tr:hover{background:rgba(249,115,22,.03)}
         <label>Pages a scanner: <span id="cp-val">3</span></label>
         <input type="range" id="cat-pages" min="1" max="10" value="3" oninput="document.getElementById('cp-val').textContent=this.value">
       </div>
-      <div></div>
+      <div class="form-group">
+        <label>Nombre de resultats: <span id="mr-val">30</span></label>
+        <input type="range" id="max-results" min="1" max="30" value="30" oninput="document.getElementById('mr-val').textContent=this.value">
+      </div>
     </div>
     <div class="checkbox-group">
       <input type="checkbox" id="exclude-digital" checked>
       <label for="exclude-digital">Exclure les produits digitaux</label>
     </div>
     <button class="btn" id="btn-cat" onclick="analyzeCategory()">Analyser la categorie</button>
+  </div>
+
+  <div id="mode-keywords" class="tab-content">
+    <p style="color:#aaa;margin-bottom:16px">Decouverte 100% automatique : l'outil scanne la page d'accueil Etsy, les tendances et les produits populaires pour trouver les mots-cles les plus recherches, puis analyse chacun d'eux (volume, concurrence, opportunite).</p>
+    <button class="btn" id="btn-kw" onclick="analyzeKeywords()">Lancer le scan automatique des tendances</button>
   </div>
 
   <div class="rocket-container" id="rocket">
@@ -238,9 +248,10 @@ let chartInstances = {};
 function destroyChart(id) { if(chartInstances[id]){chartInstances[id].destroy();delete chartInstances[id];} }
 
 function switchMode(mode) {
-  document.querySelectorAll('.tab-btn').forEach((b,i)=>{b.classList.toggle('active',i===(mode==='shop'?0:1))});
+  document.querySelectorAll('.tab-btn').forEach((b,i)=>{b.classList.toggle('active',i===(mode==='shop'?0:mode==='category'?1:2))});
   document.getElementById('mode-shop').classList.toggle('active',mode==='shop');
   document.getElementById('mode-category').classList.toggle('active',mode==='category');
+  document.getElementById('mode-keywords').classList.toggle('active',mode==='keywords');
 }
 
 function onCategoryChange() {
@@ -276,45 +287,164 @@ function analyzeShop() {
   });
 }
 
+let liveListings = [];
+let liveContainer = null;
+
 function analyzeCategory() {
   const key=document.getElementById('scraper-key').value;
   const query=document.getElementById('cat-query').value;
   const sort=document.getElementById('cat-sort').value;
   const pages=document.getElementById('cat-pages').value;
   const exDig=document.getElementById('exclude-digital').checked;
+  const maxRes=document.getElementById('max-results').value;
   if(!key){alert('Entrez votre cle ScraperAPI');return}
   if(!query){alert('Entrez un mot-cle');return}
   document.getElementById('btn-cat').disabled=true;
-  document.getElementById('results').innerHTML='';
+  document.getElementById('results').innerHTML='<h3 class="section-title" style="margin-top:20px">Resultats en direct...</h3><div id="live-results"></div>';
+  liveListings = [];
+  liveContainer = document.getElementById('live-results');
   fetch('/analyze_category',{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({scraper_key:key,query:query,sort:sort,max_pages:pages,exclude_digital:exDig})
+    body:JSON.stringify({scraper_key:key,query:query,sort:sort,max_pages:pages,exclude_digital:exDig,max_results:maxRes})
   }).then(r=>r.json()).then(d=>{
     if(d.error){hideRocket();document.getElementById('results').innerHTML='<div class="error-msg">'+d.error+'</div>';document.getElementById('btn-cat').disabled=false;return}
     pollProgress(d.task_id,'category');
   });
 }
 
+function renderLiveCard(item) {
+  const div = document.createElement('div');
+  div.className = 'product-card';
+  div.style.animation = 'fadeSlideIn 0.4s ease-out';
+  let html = '';
+  if(item.image_url) html += '<img src="'+item.image_url+'" alt="">';
+  html += '<div class="product-info"><div class="product-title">#'+item.position+' '+item.title+'</div><div class="product-meta">';
+  if(item.price>0) html += '<span>&#x1F4B0; '+item.price.toFixed(2)+' '+item.currency+'</span>';
+  if(item.rating) html += '<span>&#x2B50; '+item.rating+'</span>';
+  if(item.shop_name) html += '<span>&#x1F3EA; '+item.shop_name+'</span>';
+  html += '</div></div>';
+  div.innerHTML = html;
+  return div;
+}
+
 function pollProgress(taskId, mode) {
   const es=new EventSource('/progress/'+taskId);
   es.onmessage=function(e){
     const d=JSON.parse(e.data);
-    if(d.status==='running'){updateRocket(d.progress,d.text)}
+    if(d.status==='running'){
+      updateRocket(d.progress,d.text);
+      if(d.new_listings && d.new_listings.length > 0 && mode==='category' && liveContainer){
+        d.new_listings.forEach(item => {
+          liveListings.push(item);
+          liveContainer.appendChild(renderLiveCard(item));
+        });
+      }
+    }
     else if(d.status==='done'){
       es.close();hideRocket();
       fetch('/result/'+taskId).then(r=>r.json()).then(result=>{
         if(mode==='shop')renderShopResults(result);
-        else renderCategoryResults(result);
+        else if(mode==='category')renderCategoryResults(result);
+        else if(mode==='keywords')renderKeywordResults(result);
         document.getElementById('btn-shop').disabled=false;
         document.getElementById('btn-cat').disabled=false;
+        document.getElementById('btn-kw').disabled=false;
       });
     } else if(d.status==='error'){
       es.close();hideRocket();
       document.getElementById('results').innerHTML='<div class="error-msg">'+d.error+'</div>';
       document.getElementById('btn-shop').disabled=false;
       document.getElementById('btn-cat').disabled=false;
+      document.getElementById('btn-kw').disabled=false;
     }
   };
-  es.onerror=function(){es.close();hideRocket();document.getElementById('btn-shop').disabled=false;document.getElementById('btn-cat').disabled=false;}
+  es.onerror=function(){es.close();hideRocket();document.getElementById('btn-shop').disabled=false;document.getElementById('btn-cat').disabled=false;document.getElementById('btn-kw').disabled=false;}
+}
+
+function analyzeKeywords() {
+  const key=document.getElementById('scraper-key').value;
+  if(!key){alert('Entrez votre cle ScraperAPI');return}
+  document.getElementById('btn-kw').disabled=true;
+  document.getElementById('results').innerHTML='';
+  fetch('/analyze_keywords',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({scraper_key:key})
+  }).then(r=>r.json()).then(d=>{
+    if(d.error){hideRocket();document.getElementById('results').innerHTML='<div class="error-msg">'+d.error+'</div>';document.getElementById('btn-kw').disabled=false;return}
+    pollProgress(d.task_id,'keywords');
+  });
+}
+
+function renderKeywordResults(data) {
+  const kws=data.keywords||[];
+  let html='<hr class="divider"><h2 style="color:#F97316">Analyse mots-cles : "'+data.base_keyword+'"</h2>';
+  if(data.discovery_method==='fully_autonomous')html+='<div class="success-msg" style="margin-bottom:12px">Scan 100% automatique : mots-cles tendance decouverts depuis la page d\'accueil, les tendances et les produits populaires Etsy</div>';
+  else if(data.discovery_method==='autonomous')html+='<div class="success-msg" style="margin-bottom:12px">Decouverte automatique : mots-cles extraits des titres, tags et suggestions Etsy</div>';
+  html+='<div class="metrics"><div class="metric"><div class="metric-value">'+data.total_keywords+'</div><div class="metric-label">Mots-cles decouverts</div></div>';
+  const highOpp=kws.filter(k=>k.score>=70).length;
+  const medOpp=kws.filter(k=>k.score>=40&&k.score<70).length;
+  html+='<div class="metric"><div class="metric-value" style="color:#22C55E">'+highOpp+'</div><div class="metric-label">Forte opportunite</div></div>';
+  html+='<div class="metric"><div class="metric-value" style="color:#FBBF24">'+medOpp+'</div><div class="metric-label">Opportunite moyenne</div></div>';
+  html+='</div>';
+
+  html+='<div style="margin:16px 0;display:flex;gap:10px;align-items:center;flex-wrap:wrap">';
+  html+='<button class="btn btn-sm" style="background:rgba(34,197,94,.2);color:#22C55E;border:1px solid #22C55E" onclick="filterKw(\'high\')">Forte opportunite</button>';
+  html+='<button class="btn btn-sm" style="background:rgba(251,191,36,.2);color:#FBBF24;border:1px solid #FBBF24" onclick="filterKw(\'medium\')">Moyenne</button>';
+  html+='<button class="btn btn-sm" style="background:rgba(239,68,68,.2);color:#EF4444;border:1px solid #EF4444" onclick="filterKw(\'low\')">Sature</button>';
+  html+='<button class="btn btn-sm" onclick="filterKw(\'all\')">Tous</button>';
+  html+='<button class="btn btn-sm btn-dl" onclick="exportKeywordsCsv()" style="margin-left:auto">Export CSV</button>';
+  html+='</div>';
+
+  html+='<div class="chart-container"><canvas id="chart-kw-scores"></canvas></div>';
+
+  html+='<table id="kw-table"><thead><tr><th>Mot-cle</th><th>Volume estime</th><th>Concurrence</th><th>Vendeurs</th><th>Prix moyen</th><th>Score</th><th>Statut</th></tr></thead><tbody>';
+  kws.forEach(k=>{
+    const score=k.score;
+    let badge,color;
+    if(score>=70){badge='FORTE OPPORTUNITE';color='#22C55E'}
+    else if(score>=40){badge='MOYEN';color='#FBBF24'}
+    else{badge='SATURE';color='#EF4444'}
+    const level=score>=70?'high':score>=40?'medium':'low';
+    html+='<tr data-level="'+level+'">';
+    html+='<td style="font-weight:600">'+k.keyword+'</td>';
+    html+='<td>'+k.volume.toLocaleString()+'</td>';
+    html+='<td>'+k.competition+'</td>';
+    html+='<td>'+k.sellers+'</td>';
+    html+='<td>'+(k.avg_price>0?k.avg_price.toFixed(2)+' $':'-')+'</td>';
+    html+='<td style="font-weight:700;color:'+color+'">'+score+'</td>';
+    html+='<td><span style="background:rgba('+(score>=70?'34,197,94':score>=40?'251,191,36':'239,68,68')+',.15);color:'+color+';padding:4px 10px;border-radius:6px;font-size:.8rem;font-weight:600">'+badge+'</span></td>';
+    html+='</tr>';
+  });
+  html+='</tbody></table>';
+
+  document.getElementById('results').innerHTML=html;
+  window._kwData=data;
+
+  setTimeout(()=>{
+    const top15=kws.slice(0,15);
+    const labels=top15.map(k=>k.keyword.length>20?k.keyword.substring(0,20)+'...':k.keyword);
+    const scores=top15.map(k=>k.score);
+    const colors=top15.map(k=>k.score>=70?'rgba(34,197,94,.7)':k.score>=40?'rgba(251,191,36,.7)':'rgba(239,68,68,.7)');
+    destroyChart('chart-kw-scores');
+    const ctx=document.getElementById('chart-kw-scores');
+    if(ctx){
+      chartInstances['chart-kw-scores']=new Chart(ctx,{type:'bar',data:{labels:labels,datasets:[{label:'Score opportunite',data:scores,backgroundColor:colors,borderWidth:0}]},
+        options:{indexAxis:'y',responsive:true,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#aaa'},max:100},y:{ticks:{color:'#ccc',font:{size:11}}}}}
+      });
+    }
+  },100);
+}
+
+function filterKw(level) {
+  const rows=document.querySelectorAll('#kw-table tbody tr');
+  rows.forEach(r=>{
+    if(level==='all')r.style.display='';
+    else r.style.display=r.dataset.level===level?'':'none';
+  });
+}
+
+function exportKeywordsCsv() {
+  if(!window._kwData)return;
+  const rows=window._kwData.keywords.map(k=>({'Mot-cle':k.keyword,'Volume':k.volume,'Concurrence':k.competition,'Vendeurs':k.sellers,'Prix moyen':k.avg_price,'Score':k.score}));
+  downloadCsv(rows,'keywords_analysis.csv');
 }
 
 function createChart(canvasId, type, labels, data, label, color) {
@@ -327,8 +457,6 @@ function createChart(canvasId, type, labels, data, label, color) {
 }
 
 function renderCategoryResults(cat) {
-  const ali=cat.ali_matches||{};
-  const aliCount=Object.keys(ali).length;
   const listings=cat.listings||[];
   const stats=cat.price_stats||{};
   const ranges=cat.price_ranges||{};
@@ -340,37 +468,25 @@ function renderCategoryResults(cat) {
   html+='<div class="metric"><div class="metric-value">'+cat.listings_count+'</div><div class="metric-label">Produits analyses</div></div>';
   if(stats.avg)html+='<div class="metric"><div class="metric-value">'+stats.avg.toFixed(2)+' $</div><div class="metric-label">Prix moyen</div></div>';
   html+='</div>';
-  if(aliCount>0)html+='<div class="success-msg">&#x1F50D; '+aliCount+' produit(s) sur '+cat.listings_count+' trouves aussi sur AliExpress</div>';
 
   html+='<div class="result-tabs">';
   html+='<div class="result-tab active" onclick="switchResultTab(\'cat-products\',this)">Produits ('+listings.length+')</div>';
   html+='<div class="result-tab" onclick="switchResultTab(\'cat-prices\',this)">Prix</div>';
   html+='<div class="result-tab" onclick="switchResultTab(\'cat-keywords\',this)">Mots-cles</div>';
   html+='<div class="result-tab" onclick="switchResultTab(\'cat-shops\',this)">Boutiques</div>';
-  html+='<div class="result-tab" onclick="switchResultTab(\'cat-ali\',this)">AliExpress ('+aliCount+')</div>';
   html+='<div class="result-tab" onclick="switchResultTab(\'cat-export\',this)">Export</div>';
   html+='</div>';
 
   // Products tab
   html+='<div class="result-panel active" id="cat-products">';
   listings.forEach((item,i)=>{
-    const hasAli=ali[item.listing_id];
     html+='<div class="product-card">';
     if(item.image_url)html+='<img src="'+item.image_url+'" alt="">';
-    html+='<div class="product-info"><div class="product-title">#'+item.position+' '+(hasAli?'&#x1F1E8;&#x1F1F3; ':'')+item.title+'</div><div class="product-meta">';
+    html+='<div class="product-info"><div class="product-title">#'+item.position+' '+item.title+'</div><div class="product-meta">';
     if(item.price>0)html+='<span>&#x1F4B0; '+item.price.toFixed(2)+' '+item.currency+'</span>';
     if(item.rating)html+='<span>&#x2B50; '+item.rating+'</span>';
     if(item.shop_name)html+='<span>&#x1F3EA; '+item.shop_name+'</span>';
-    if(hasAli){
-      const ar=hasAli.results||[];
-      if(ar.length&&ar[0].price>0){
-        html+='<span class="ali-badge">AliExpress: '+ar[0].price.toFixed(2)+' $</span>';
-        if(item.price>0)html+='<span class="ali-badge">Marge: '+(item.price-ar[0].price).toFixed(2)+' $</span>';
-      } else html+='<span class="ali-badge">Trouve sur AliExpress</span>';
-    }
-    html+='</div>';
-    if(hasAli&&hasAli.search_url)html+='<a class="ali-link" href="'+hasAli.search_url+'" target="_blank">Voir sur AliExpress &#x2197;</a>';
-    html+='</div></div>';
+    html+='</div></div></div>';
   });
   html+='</div>';
 
@@ -408,31 +524,6 @@ function renderCategoryResults(cat) {
     for(const[k,v]of Object.entries(shops))html+='<tr><td>'+k+'</td><td>'+v+'</td></tr>';
     html+='</table>';
   }
-  html+='</div>';
-
-  // AliExpress tab
-  html+='<div class="result-panel" id="cat-ali">';
-  if(aliCount>0){
-    html+='<h3 class="section-title">Produits trouves sur AliExpress</h3>';
-    listings.forEach(item=>{
-      if(!ali[item.listing_id])return;
-      const ad=ali[item.listing_id];const ar=ad.results||[];
-      html+='<div class="ali-comparison"><div class="ali-side"><h4>Produit Etsy</h4>';
-      if(item.image_url)html+='<img src="'+item.image_url+'">';
-      html+='<p>'+item.title.substring(0,80)+'</p>';
-      if(item.price>0)html+='<p>&#x1F4B0; '+item.price.toFixed(2)+' '+item.currency+'</p>';
-      html+='</div><div class="ali-side"><h4>AliExpress</h4>';
-      if(ar.length){ar.slice(0,3).forEach(r=>{
-        if(r.image_url)html+='<img src="'+r.image_url+'">';
-        const t=r.title||'Sans titre';
-        if(r.url)html+='<p><a class="ali-link" href="'+r.url+'" target="_blank">'+t.substring(0,70)+'</a></p>';
-        else html+='<p>'+t.substring(0,70)+'</p>';
-        if(r.price>0){const m=item.price-r.price;html+='<p>&#x1F4B0; '+r.price.toFixed(2)+' $ — Marge: <strong>'+(m>0?'+':'')+m.toFixed(2)+' $</strong></p>';}
-      })} else html+='<p class="info-msg">Correspondance detectee</p>';
-      html+='<a class="ali-link" href="'+ad.search_url+'" target="_blank">Rechercher sur AliExpress &#x2197;</a>';
-      html+='</div></div>';
-    });
-  } else html+='<div class="info-msg">Aucun produit trouve sur AliExpress.</div>';
   html+='</div>';
 
   // Export tab
