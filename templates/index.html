@@ -3,710 +3,280 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Etsy AI V2</title>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<title>Ultra Realism AI</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
 <style>
-*{margin:0;padding:0;box-sizing:border-box}
-@keyframes gradientMove{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
-@keyframes neonPulse{
-0%,100%{text-shadow:0 0 7px #fff,0 0 10px #fff,0 0 21px #fff,0 0 42px #F97316,0 0 82px #F97316,0 0 92px #F97316,0 0 102px #F97316,0 0 151px #F97316}
-50%{text-shadow:0 0 4px #fff,0 0 7px #fff,0 0 13px #fff,0 0 28px #F97316,0 0 55px #F97316,0 0 62px #F97316,0 0 70px #F97316,0 0 100px #F97316}
+*{
+margin:0;
+padding:0;
+box-sizing:border-box;
 }
-@keyframes neonFlicker{
-0%,19%,21%,23%,25%,54%,56%,100%{text-shadow:0 0 7px #fff,0 0 10px #fff,0 0 21px #fff,0 0 42px #F97316,0 0 82px #F97316,0 0 92px #F97316,0 0 102px #F97316,0 0 151px #F97316}
-20%,24%,55%{text-shadow:none}
-}
-@keyframes smokeRise{0%{opacity:.8;transform:scale(1) translateY(0)}100%{opacity:0;transform:scale(2.5) translateY(-30px)}}
-@keyframes rocketShake{0%,100%{transform:translateY(0)}25%{transform:translateY(-2px)}75%{transform:translateY(2px)}}
-@keyframes flamePulse{0%,100%{opacity:1;transform:scaleY(1)}50%{opacity:.7;transform:scaleY(.8)}}
-@keyframes fadeSlideIn{0%{opacity:0;transform:translateY(15px)}100%{opacity:1;transform:translateY(0)}}
 
 body{
-  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
-  background:#030D03;
-  background-image:radial-gradient(circle at 15% 25%,rgba(10,60,10,.4) 0%,transparent 40%),radial-gradient(circle at 85% 75%,rgba(5,40,5,.3) 0%,transparent 40%);
-  color:#E0E0E0;min-height:100vh;
+overflow:hidden;
+background:black;
+font-family:Arial;
+color:white;
 }
-.container{max-width:1200px;margin:0 auto;padding:20px}
-.title{text-align:center;font-size:3.2rem;font-weight:900;color:#fff;letter-spacing:4px;text-transform:uppercase;
-  animation:neonPulse 3s ease-in-out infinite,neonFlicker 8s linear infinite;
-  transform:perspective(500px) rotateX(8deg);margin:30px 0 5px}
-.subtitle{text-align:center;color:rgba(224,224,224,.5);font-size:1rem;margin-bottom:30px}
 
-.tabs{display:flex;gap:8px;margin-bottom:20px}
-.tab-btn{padding:12px 24px;background:rgba(5,25,5,.7);border:1px solid rgba(249,115,22,.15);color:#E0E0E0;border-radius:8px 8px 0 0;cursor:pointer;font-size:.95rem;font-weight:600;transition:all .3s}
-.tab-btn:hover{background:rgba(249,115,22,.1);border-color:rgba(249,115,22,.3)}
-.tab-btn.active{background:rgba(249,115,22,.15);border-color:#F97316;color:#F97316}
-.tab-content{display:none}.tab-content.active{display:block}
+/* CANVAS */
+canvas{
+position:fixed;
+top:0;
+left:0;
+z-index:0;
+}
 
-.form-group{margin-bottom:16px}
-.form-group label{display:block;color:#ccc;margin-bottom:6px;font-weight:600;font-size:.9rem}
-.form-group input,.form-group select{width:100%;padding:10px 14px;background:rgba(5,25,5,.8);border:1px solid rgba(249,115,22,.2);border-radius:8px;color:#E0E0E0;font-size:.95rem;transition:border-color .3s}
-.form-group input:focus,.form-group select:focus{outline:none;border-color:#F97316}
-.form-row{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-.form-row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
+/* GLASS PANEL */
+.panel{
+position:absolute;
+z-index:10;
+top:50%;
+left:50%;
+transform:translate(-50%,-50%);
+width:90%;
+max-width:850px;
+padding:60px;
+border-radius:40px;
 
-.checkbox-group{display:flex;align-items:center;gap:10px;margin-bottom:16px}
-.checkbox-group input[type=checkbox]{width:18px;height:18px;accent-color:#F97316}
-.checkbox-group label{color:#ccc;font-weight:600;font-size:.9rem;margin:0}
+background:rgba(255,255,255,0.05);
+backdrop-filter:blur(60px);
+border:1px solid rgba(255,255,255,0.1);
+box-shadow:0 60px 150px rgba(0,0,0,0.9);
 
-.btn{padding:12px 28px;background:linear-gradient(135deg,#F97316,#EA580C);color:#fff;border:none;border-radius:10px;font-size:1rem;font-weight:700;cursor:pointer;transition:all .3s;box-shadow:0 4px 15px rgba(249,115,22,.3);width:100%}
-.btn:hover{transform:translateY(-2px);box-shadow:0 6px 25px rgba(249,115,22,.5)}
-.btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
-.btn-sm{padding:8px 16px;font-size:.85rem;width:auto}
-.btn-dl{background:linear-gradient(135deg,#3B82F6,#2563EB);box-shadow:0 4px 15px rgba(59,130,246,.3)}
-.btn-dl:hover{box-shadow:0 6px 25px rgba(59,130,246,.5)}
+text-align:center;
+animation:fade 1.5s ease;
+}
 
-.rocket-container{position:relative;width:100%;height:60px;margin:20px 0;display:none}
-.rocket-track{position:absolute;top:28px;left:0;width:100%;height:6px;background:rgba(255,255,255,.1);border-radius:3px}
-.rocket-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,#F97316,#FBBF24);transition:width .5s;box-shadow:0 0 12px rgba(249,115,22,.5);width:0%}
-.rocket-emoji{position:absolute;top:8px;font-size:28px;transition:left .5s;animation:rocketShake .3s infinite;z-index:2;left:0}
-.rocket-flame{position:absolute;top:18px;font-size:16px;transition:left .5s;z-index:1;animation:flamePulse .2s infinite;left:0}
-.smoke-trail{position:absolute;top:22px;height:20px;z-index:0;pointer-events:none;left:0;transition:width .5s;width:0}
-.smoke-puff{position:absolute;width:10px;height:10px;border-radius:50%;background:rgba(200,200,200,.4);animation:smokeRise 1.5s ease-out infinite}
-.smoke-puff:nth-child(1){right:0;animation-delay:0s}
-.smoke-puff:nth-child(2){right:15px;animation-delay:.3s;background:rgba(180,180,180,.3)}
-.smoke-puff:nth-child(3){right:30px;animation-delay:.6s;background:rgba(160,160,160,.25)}
-.smoke-puff:nth-child(4){right:50px;animation-delay:.9s;background:rgba(140,140,140,.2)}
-.rocket-status{text-align:center;color:rgba(255,255,255,.7);font-size:.9rem;margin-top:4px}
+@keyframes fade{
+from{opacity:0;transform:translate(-50%,-45%)}
+to{opacity:1;transform:translate(-50%,-50%)}
+}
 
-.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;margin:20px 0}
-.metric{background:rgba(5,25,5,.8);border:1px solid rgba(249,115,22,.2);border-radius:12px;padding:16px;text-align:center;transition:all .3s}
-.metric:hover{transform:translateY(-3px);border-color:rgba(249,115,22,.6);box-shadow:0 8px 25px rgba(249,115,22,.2)}
-.metric-value{font-size:1.6rem;font-weight:700;color:#F97316}
-.metric-label{font-size:.8rem;color:#aaa;margin-top:4px}
+h1{
+font-size:3rem;
+background:linear-gradient(90deg,#00f5ff,#9d4edd,#ff00c8);
+-webkit-background-clip:text;
+-webkit-text-fill-color:transparent;
+margin-bottom:30px;
+}
 
-.result-tabs{display:flex;gap:6px;margin:20px 0 0;flex-wrap:wrap}
-.result-tab{padding:10px 18px;background:rgba(5,25,5,.7);border:1px solid rgba(249,115,22,.1);border-bottom:none;border-radius:8px 8px 0 0;cursor:pointer;color:#ccc;font-size:.85rem;font-weight:600;transition:all .3s}
-.result-tab:hover{background:rgba(249,115,22,.1);color:#F97316}
-.result-tab.active{background:rgba(249,115,22,.15);border-color:#F97316;color:#F97316}
-.result-panel{display:none;background:rgba(5,25,5,.3);border:1px solid rgba(249,115,22,.1);border-radius:0 0 10px 10px;padding:20px}
-.result-panel.active{display:block}
+textarea{
+width:100%;
+height:150px;
+border-radius:25px;
+padding:20px;
+background:rgba(255,255,255,0.08);
+border:1px solid rgba(255,255,255,0.2);
+color:white;
+font-size:16px;
+resize:none;
+outline:none;
+transition:0.3s;
+}
 
-.product-card{display:flex;gap:16px;padding:16px;border-bottom:1px solid rgba(249,115,22,.1);transition:background .3s}
-.product-card:hover{background:rgba(249,115,22,.03)}
-.product-card img{width:120px;height:120px;object-fit:cover;border-radius:8px;background:rgba(0,0,0,.3)}
-.product-info{flex:1}
-.product-title{font-weight:600;margin-bottom:6px;line-height:1.4}
-.product-meta{color:#aaa;font-size:.85rem;display:flex;gap:12px;flex-wrap:wrap;margin-top:4px}
-.product-meta span{display:flex;align-items:center;gap:4px}
-.ali-badge{background:rgba(249,115,22,.15);color:#F97316;padding:2px 8px;border-radius:4px;font-size:.8rem;font-weight:600}
-.ali-link{color:#3B82F6;text-decoration:none;font-size:.85rem}
-.ali-link:hover{text-decoration:underline}
+textarea:focus{
+border-color:#9d4edd;
+box-shadow:0 0 40px rgba(157,78,221,0.8);
+}
 
-.ali-comparison{display:grid;grid-template-columns:1fr 1fr;gap:20px;padding:16px;border-bottom:1px solid rgba(249,115,22,.1)}
-.ali-side{background:rgba(5,25,5,.5);padding:16px;border-radius:10px;border:1px solid rgba(249,115,22,.1)}
-.ali-side h4{margin-bottom:12px;font-size:.95rem}
-.ali-side img{width:100px;height:100px;object-fit:cover;border-radius:6px;margin-bottom:8px}
+button{
+margin-top:25px;
+width:100%;
+padding:16px;
+border:none;
+border-radius:18px;
+font-size:17px;
+font-weight:bold;
+cursor:pointer;
+background:linear-gradient(135deg,#00f5ff,#9d4edd);
+color:white;
+transition:0.3s;
+}
 
-.chart-container{background:rgba(5,25,5,.5);border-radius:10px;padding:20px;margin:16px 0}
-canvas{max-height:350px}
+button:hover{
+transform:translateY(-5px);
+box-shadow:0 25px 70px rgba(0,245,255,0.6);
+}
 
-.error-msg{background:rgba(220,38,38,.15);color:#FCA5A5;padding:14px;border-radius:10px;border:1px solid rgba(220,38,38,.3);margin:16px 0}
-.success-msg{background:rgba(34,197,94,.15);color:#86EFAC;padding:14px;border-radius:10px;border:1px solid rgba(34,197,94,.3);margin:16px 0}
-.info-msg{background:rgba(59,130,246,.15);color:#93C5FD;padding:14px;border-radius:10px;border:1px solid rgba(59,130,246,.3);margin:16px 0}
+img{
+margin-top:25px;
+width:100%;
+border-radius:25px;
+display:none;
+box-shadow:0 40px 120px black;
+}
 
-.section-title{font-size:1.2rem;font-weight:700;color:#F97316;border-bottom:2px solid rgba(249,115,22,.2);padding-bottom:8px;margin:20px 0 16px}
-.divider{border:none;border-top:1px solid rgba(249,115,22,.1);margin:24px 0}
-
-table{width:100%;border-collapse:collapse;margin:12px 0}
-th{background:rgba(249,115,22,.1);color:#F97316;padding:10px;text-align:left;font-size:.85rem}
-td{padding:10px;border-bottom:1px solid rgba(249,115,22,.05);font-size:.85rem}
-tr:hover{background:rgba(249,115,22,.03)}
-
-.review-card{padding:12px;border-bottom:1px solid rgba(249,115,22,.08)}
-.review-date{font-weight:600;color:#F97316;font-size:.85rem}
-.review-stars{color:#FBBF24;margin:4px 0}
-.review-text{color:#ccc;font-size:.9rem;line-height:1.5}
-
-.hidden{display:none}
-@media(max-width:768px){.form-row,.form-row-3,.ali-comparison{grid-template-columns:1fr}.title{font-size:2rem}.product-card{flex-direction:column}.product-card img{width:100%}}
 </style>
 </head>
 <body>
-<div class="container">
-  <h1 class="title">ETSY AI V2</h1>
-  <p class="subtitle">Analysez les boutiques et categories Etsy en profondeur</p>
-  <div style="text-align:center;margin-bottom:20px">
-    <a href="/download_project" class="btn btn-dl btn-sm" style="display:inline-block;text-decoration:none;padding:10px 20px">Telecharger les fichiers pour GitHub (ZIP)</a>
-  </div>
-
-  <div class="form-group" id="api-key-section">
-    <label>Cle ScraperAPI</label>
-    <input type="password" id="scraper-key" value="{{ env_key }}" placeholder="Votre cle ScraperAPI">
-    {% if env_key %}<small style="color:#86EFAC">Cle detectee automatiquement</small>{% endif %}
-  </div>
-
-  <div class="tabs">
-    <button class="tab-btn active" onclick="switchMode('shop')">Boutique</button>
-    <button class="tab-btn" onclick="switchMode('category')">Categorie</button>
-    <button class="tab-btn" onclick="switchMode('keywords')">Mots-cles</button>
-  </div>
-
-  <div id="mode-shop" class="tab-content active">
-    <p style="color:#aaa;margin-bottom:16px">Analysez les donnees d'un vendeur Etsy : ventes, chiffre d'affaires, avis et tags.</p>
-    <div class="form-group">
-      <label>URL ou nom de la boutique</label>
-      <input type="text" id="shop-url" placeholder="https://www.etsy.com/shop/NomDeLaBoutique ou NomDeLaBoutique">
-    </div>
-    <div class="form-row">
-      <div class="form-group">
-        <label>Pages de produits: <span id="lp-val">3</span></label>
-        <input type="range" id="listing-pages" min="1" max="10" value="3" oninput="document.getElementById('lp-val').textContent=this.value">
-      </div>
-      <div class="form-group">
-        <label>Pages d'avis: <span id="rp-val">5</span></label>
-        <input type="range" id="review-pages" min="1" max="20" value="5" oninput="document.getElementById('rp-val').textContent=this.value">
-      </div>
-    </div>
-    <button class="btn" id="btn-shop" onclick="analyzeShop()">Analyser la boutique</button>
-  </div>
-
-  <div id="mode-category" class="tab-content">
-    <p style="color:#aaa;margin-bottom:16px">Recherchez une categorie ou un mot-cle pour trouver les produits les mieux classes sur Etsy.</p>
-    <div class="form-row">
-      <div class="form-group">
-        <label>Categorie Etsy</label>
-        <select id="cat-select" onchange="onCategoryChange()">
-          <option value="">-- Choisir une categorie --</option>
-          <option value="jewelry accessories">Bijoux & Accessoires</option>
-          <option value="clothing shoes">Vetements & Chaussures</option>
-          <option value="home decor">Maison & Decoration</option>
-          <option value="wedding party">Mariage & Fetes</option>
-          <option value="toys games">Jouets & Loisirs</option>
-          <option value="art collectibles">Art & Collections</option>
-          <option value="craft supplies tools">Fournitures creatives</option>
-          <option value="bags purses">Sacs & Bagagerie</option>
-          <option value="bath beauty">Beaute & Soins</option>
-          <option value="electronics accessories">Electronique & Accessoires</option>
-          <option value="paper party supplies stickers">Papeterie & Stickers</option>
-          <option value="candles home fragrance">Bougies & Parfums</option>
-          <option value="3d printed">Impression 3D</option>
-          <option value="personalized gifts">Cadeaux personnalises</option>
-          <option value="vintage">Vintage</option>
-          <option value="knitting crochet">Tricot & Crochet</option>
-          <option value="ceramics pottery">Ceramique & Poterie</option>
-          <option value="planner stickers">Stickers & Planners</option>
-          <option value="graphic tees shirts">T-shirts imprimes</option>
-          <option value="furniture">Meubles</option>
-          <option value="digital downloads">Produits numeriques</option>
-          <option value="pet supplies accessories">Animaux</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label>Mot-cle</label>
-        <input type="text" id="cat-query" placeholder="Ex: planner stickers, bijoux argent...">
-      </div>
-    </div>
-    <div class="form-row-3">
-      <div class="form-group">
-        <label>Trier par</label>
-        <select id="cat-sort">
-          <option value="most_relevant">Plus pertinents</option>
-          <option value="price_asc">Prix croissant</option>
-          <option value="price_desc">Prix decroissant</option>
-          <option value="date_desc">Plus recents</option>
-          <option value="highest_reviews">Meilleures ventes</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label>Pages a scanner: <span id="cp-val">3</span></label>
-        <input type="range" id="cat-pages" min="1" max="10" value="3" oninput="document.getElementById('cp-val').textContent=this.value">
-      </div>
-      <div class="form-group">
-        <label>Nombre de resultats: <span id="mr-val">30</span></label>
-        <input type="range" id="max-results" min="1" max="30" value="30" oninput="document.getElementById('mr-val').textContent=this.value">
-      </div>
-    </div>
-    <div class="checkbox-group">
-      <input type="checkbox" id="exclude-digital" checked>
-      <label for="exclude-digital">Exclure les produits digitaux</label>
-    </div>
-    <button class="btn" id="btn-cat" onclick="analyzeCategory()">Analyser la categorie</button>
-  </div>
-
-  <div id="mode-keywords" class="tab-content">
-    <p style="color:#aaa;margin-bottom:16px">Decouverte 100% automatique : l'outil scanne la page d'accueil Etsy, les tendances et les produits populaires pour trouver les mots-cles les plus recherches, puis analyse chacun d'eux (volume, concurrence, opportunite).</p>
-    <button class="btn" id="btn-kw" onclick="analyzeKeywords()">Lancer le scan automatique des tendances</button>
-  </div>
-
-  <div class="rocket-container" id="rocket">
-    <div class="rocket-track"><div class="rocket-fill" id="rocket-fill"></div></div>
-    <div class="smoke-trail" id="smoke-trail">
-      <div class="smoke-puff"></div><div class="smoke-puff"></div><div class="smoke-puff"></div><div class="smoke-puff"></div>
-    </div>
-    <div class="rocket-flame" id="rocket-flame">&#x1F525;</div>
-    <div class="rocket-emoji" id="rocket-emoji">&#x1F680;</div>
-    <div class="rocket-status" id="rocket-status">Demarrage... 0%</div>
-  </div>
-
-  <div id="results"></div>
-</div>
 
 <script>
-let chartInstances = {};
-function destroyChart(id) { if(chartInstances[id]){chartInstances[id].destroy();delete chartInstances[id];} }
 
-function switchMode(mode) {
-  document.querySelectorAll('.tab-btn').forEach((b,i)=>{b.classList.toggle('active',i===(mode==='shop'?0:mode==='category'?1:2))});
-  document.getElementById('mode-shop').classList.toggle('active',mode==='shop');
-  document.getElementById('mode-category').classList.toggle('active',mode==='category');
-  document.getElementById('mode-keywords').classList.toggle('active',mode==='keywords');
+/* ========================= */
+/* SCENE SETUP */
+/* ========================= */
+
+let scene = new THREE.Scene();
+
+let camera = new THREE.PerspectiveCamera(
+70,
+window.innerWidth/window.innerHeight,
+0.1,
+1000
+);
+
+camera.position.z = 6;
+
+let renderer = new THREE.WebGLRenderer({
+antialias:true,
+alpha:true
+});
+
+renderer.setSize(window.innerWidth,window.innerHeight);
+document.body.appendChild(renderer.domElement);
+
+/* ========================= */
+/* ULTRA REALISTIC LIQUID PLANE */
+/* ========================= */
+
+let geometry = new THREE.PlaneGeometry(25,25,200,200);
+
+let material = new THREE.ShaderMaterial({
+
+uniforms:{
+u_time:{value:0},
+u_mouse:{value:new THREE.Vector2(0,0)}
+},
+
+vertexShader:`
+uniform float u_time;
+uniform vec2 u_mouse;
+varying vec2 vUv;
+
+void main(){
+
+vUv = uv;
+
+vec3 pos = position;
+
+float dist = distance(uv,u_mouse);
+
+pos.z += sin(dist*25.0 - u_time*4.0)*0.8;
+pos.x += cos(uv.y*10.0 + u_time)*0.2;
+pos.y += sin(uv.x*10.0 + u_time)*0.2;
+
+gl_Position = projectionMatrix * modelViewMatrix * vec4(pos,1.0);
+}
+`,
+
+fragmentShader:`
+varying vec2 vUv;
+
+void main(){
+
+vec3 deepBlue = vec3(0.02,0.02,0.08);
+vec3 neon = vec3(0.0,1.0,0.9);
+
+float glow = smoothstep(0.2,0.8,vUv.x);
+
+vec3 color = mix(deepBlue,neon,glow);
+
+gl_FragColor = vec4(color,0.95);
+}
+`,
+
+transparent:true
+
+});
+
+let plane = new THREE.Mesh(geometry,material);
+scene.add(plane);
+
+/* ========================= */
+/* PARTICULES REALISTES */
+/* ========================= */
+
+let particleGeo = new THREE.BufferGeometry();
+let count = 1200;
+
+let positions = new Float32Array(count*3);
+
+for(let i=0;i<count;i++){
+positions[i*3] = (Math.random()-0.5)*30;
+positions[i*3+1] = (Math.random()-0.5)*30;
+positions[i*3+2] = (Math.random()-0.5)*30;
 }
 
-function onCategoryChange() {
-  const val = document.getElementById('cat-select').value;
-  if(val) document.getElementById('cat-query').value = val;
+particleGeo.setAttribute("position",new THREE.BufferAttribute(positions,3));
+
+let particleMat = new THREE.PointsMaterial({
+color:"#ffffff",
+size:0.08,
+transparent:true,
+opacity:0.6
+});
+
+let particles = new THREE.Points(particleGeo,particleMat);
+scene.add(particles);
+
+/* ========================= */
+/* ANIMATION LOOP */
+/* ========================= */
+
+function animate(){
+requestAnimationFrame(animate);
+
+material.uniforms.u_time.value +=0.02;
+
+plane.rotation.x = Math.sin(Date.now()*0.0003)*0.1;
+plane.rotation.y = Math.cos(Date.now()*0.0002)*0.1;
+
+particles.rotation.y +=0.001;
+
+renderer.render(scene,camera);
 }
 
-function updateRocket(pct, text) {
-  const p = Math.max(0, Math.min(100, Math.round(pct*100)));
-  document.getElementById('rocket').style.display='block';
-  document.getElementById('rocket-fill').style.width=p+'%';
-  document.getElementById('rocket-emoji').style.left='calc('+p+'% - 14px)';
-  document.getElementById('rocket-flame').style.left='calc('+p+'% - 28px)';
-  document.getElementById('smoke-trail').style.width=Math.max(0,p-2)+'%';
-  document.getElementById('rocket-status').textContent=text+' — '+p+'%';
-}
-function hideRocket(){document.getElementById('rocket').style.display='none'}
+animate();
 
-function analyzeShop() {
-  const key=document.getElementById('scraper-key').value;
-  const url=document.getElementById('shop-url').value;
-  const lp=document.getElementById('listing-pages').value;
-  const rp=document.getElementById('review-pages').value;
-  if(!key){alert('Entrez votre cle ScraperAPI');return}
-  if(!url){alert('Entrez une URL ou nom de boutique');return}
-  document.getElementById('btn-shop').disabled=true;
-  document.getElementById('results').innerHTML='';
-  fetch('/analyze_shop',{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({scraper_key:key,url:url,max_listing_pages:lp,max_review_pages:rp})
-  }).then(r=>r.json()).then(d=>{
-    if(d.error){hideRocket();document.getElementById('results').innerHTML='<div class="error-msg">'+d.error+'</div>';document.getElementById('btn-shop').disabled=false;return}
-    pollProgress(d.task_id,'shop');
-  });
-}
+/* ========================= */
+/* MOUSE INTERACTION */
+/* ========================= */
 
-let liveListings = [];
-let liveContainer = null;
+window.addEventListener("mousemove",(e)=>{
+let x = (e.clientX/window.innerWidth)*2-1;
+let y = -(e.clientY/window.innerHeight)*2+1;
 
-function analyzeCategory() {
-  const key=document.getElementById('scraper-key').value;
-  const query=document.getElementById('cat-query').value;
-  const sort=document.getElementById('cat-sort').value;
-  const pages=document.getElementById('cat-pages').value;
-  const exDig=document.getElementById('exclude-digital').checked;
-  const maxRes=document.getElementById('max-results').value;
-  if(!key){alert('Entrez votre cle ScraperAPI');return}
-  if(!query){alert('Entrez un mot-cle');return}
-  document.getElementById('btn-cat').disabled=true;
-  document.getElementById('results').innerHTML='<h3 class="section-title" style="margin-top:20px">Resultats en direct...</h3><div id="live-results"></div>';
-  liveListings = [];
-  liveContainer = document.getElementById('live-results');
-  fetch('/analyze_category',{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({scraper_key:key,query:query,sort:sort,max_pages:pages,exclude_digital:exDig,max_results:maxRes})
-  }).then(r=>r.json()).then(d=>{
-    if(d.error){hideRocket();document.getElementById('results').innerHTML='<div class="error-msg">'+d.error+'</div>';document.getElementById('btn-cat').disabled=false;return}
-    pollProgress(d.task_id,'category');
-  });
-}
+material.uniforms.u_mouse.value.x = (x+1)/2;
+material.uniforms.u_mouse.value.y = (y+1)/2;
+});
 
-function renderLiveCard(item) {
-  const div = document.createElement('div');
-  div.className = 'product-card';
-  div.style.animation = 'fadeSlideIn 0.4s ease-out';
-  let html = '';
-  if(item.image_url) html += '<img src="'+item.image_url+'" alt="">';
-  html += '<div class="product-info"><div class="product-title">#'+item.position+' '+item.title+'</div><div class="product-meta">';
-  if(item.price>0) html += '<span>&#x1F4B0; '+item.price.toFixed(2)+' '+item.currency+'</span>';
-  if(item.rating) html += '<span>&#x2B50; '+item.rating+'</span>';
-  if(item.shop_name) html += '<span>&#x1F3EA; '+item.shop_name+'</span>';
-  html += '</div></div>';
-  div.innerHTML = html;
-  return div;
-}
+/* CLICK WAVE */
 
-function pollProgress(taskId, mode) {
-  const es=new EventSource('/progress/'+taskId);
-  es.onmessage=function(e){
-    const d=JSON.parse(e.data);
-    if(d.status==='running'){
-      updateRocket(d.progress,d.text);
-      if(d.new_listings && d.new_listings.length > 0 && mode==='category' && liveContainer){
-        d.new_listings.forEach(item => {
-          liveListings.push(item);
-          liveContainer.appendChild(renderLiveCard(item));
-        });
-      }
-    }
-    else if(d.status==='done'){
-      es.close();hideRocket();
-      fetch('/result/'+taskId).then(r=>r.json()).then(result=>{
-        if(mode==='shop')renderShopResults(result);
-        else if(mode==='category')renderCategoryResults(result);
-        else if(mode==='keywords')renderKeywordResults(result);
-        document.getElementById('btn-shop').disabled=false;
-        document.getElementById('btn-cat').disabled=false;
-        document.getElementById('btn-kw').disabled=false;
-      });
-    } else if(d.status==='error'){
-      es.close();hideRocket();
-      document.getElementById('results').innerHTML='<div class="error-msg">'+d.error+'</div>';
-      document.getElementById('btn-shop').disabled=false;
-      document.getElementById('btn-cat').disabled=false;
-      document.getElementById('btn-kw').disabled=false;
-    }
-  };
-  es.onerror=function(){es.close();hideRocket();document.getElementById('btn-shop').disabled=false;document.getElementById('btn-cat').disabled=false;document.getElementById('btn-kw').disabled=false;}
-}
+window.addEventListener("click",()=>{
+material.uniforms.u_time.value +=3;
+});
 
-function analyzeKeywords() {
-  const key=document.getElementById('scraper-key').value;
-  if(!key){alert('Entrez votre cle ScraperAPI');return}
-  document.getElementById('btn-kw').disabled=true;
-  document.getElementById('results').innerHTML='';
-  fetch('/analyze_keywords',{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({scraper_key:key})
-  }).then(r=>r.json()).then(d=>{
-    if(d.error){hideRocket();document.getElementById('results').innerHTML='<div class="error-msg">'+d.error+'</div>';document.getElementById('btn-kw').disabled=false;return}
-    pollProgress(d.task_id,'keywords');
-  });
-}
+/* RESIZE */
 
-function renderKeywordResults(data) {
-  const kws=data.keywords||[];
-  let html='<hr class="divider"><h2 style="color:#F97316">Analyse mots-cles : "'+data.base_keyword+'"</h2>';
-  if(data.discovery_method==='fully_autonomous')html+='<div class="success-msg" style="margin-bottom:12px">Scan 100% automatique : mots-cles tendance decouverts depuis la page d\'accueil, les tendances et les produits populaires Etsy</div>';
-  else if(data.discovery_method==='autonomous')html+='<div class="success-msg" style="margin-bottom:12px">Decouverte automatique : mots-cles extraits des titres, tags et suggestions Etsy</div>';
-  html+='<div class="metrics"><div class="metric"><div class="metric-value">'+data.total_keywords+'</div><div class="metric-label">Mots-cles decouverts</div></div>';
-  const highOpp=kws.filter(k=>k.score>=70).length;
-  const medOpp=kws.filter(k=>k.score>=40&&k.score<70).length;
-  html+='<div class="metric"><div class="metric-value" style="color:#22C55E">'+highOpp+'</div><div class="metric-label">Forte opportunite</div></div>';
-  html+='<div class="metric"><div class="metric-value" style="color:#FBBF24">'+medOpp+'</div><div class="metric-label">Opportunite moyenne</div></div>';
-  html+='</div>';
+window.addEventListener("resize",()=>{
+renderer.setSize(window.innerWidth,window.innerHeight);
+camera.aspect = window.innerWidth/window.innerHeight;
+camera.updateProjectionMatrix();
+});
 
-  html+='<div style="margin:16px 0;display:flex;gap:10px;align-items:center;flex-wrap:wrap">';
-  html+='<button class="btn btn-sm" style="background:rgba(34,197,94,.2);color:#22C55E;border:1px solid #22C55E" onclick="filterKw(\'high\')">Forte opportunite</button>';
-  html+='<button class="btn btn-sm" style="background:rgba(251,191,36,.2);color:#FBBF24;border:1px solid #FBBF24" onclick="filterKw(\'medium\')">Moyenne</button>';
-  html+='<button class="btn btn-sm" style="background:rgba(239,68,68,.2);color:#EF4444;border:1px solid #EF4444" onclick="filterKw(\'low\')">Sature</button>';
-  html+='<button class="btn btn-sm" onclick="filterKw(\'all\')">Tous</button>';
-  html+='<button class="btn btn-sm btn-dl" onclick="exportKeywordsCsv()" style="margin-left:auto">Export CSV</button>';
-  html+='</div>';
-
-  html+='<div class="chart-container"><canvas id="chart-kw-scores"></canvas></div>';
-
-  html+='<table id="kw-table"><thead><tr><th>Mot-cle</th><th>Volume estime</th><th>Concurrence</th><th>Vendeurs</th><th>Prix moyen</th><th>Score</th><th>Statut</th></tr></thead><tbody>';
-  kws.forEach(k=>{
-    const score=k.score;
-    let badge,color;
-    if(score>=70){badge='FORTE OPPORTUNITE';color='#22C55E'}
-    else if(score>=40){badge='MOYEN';color='#FBBF24'}
-    else{badge='SATURE';color='#EF4444'}
-    const level=score>=70?'high':score>=40?'medium':'low';
-    html+='<tr data-level="'+level+'">';
-    html+='<td style="font-weight:600">'+k.keyword+'</td>';
-    html+='<td>'+k.volume.toLocaleString()+'</td>';
-    html+='<td>'+k.competition+'</td>';
-    html+='<td>'+k.sellers+'</td>';
-    html+='<td>'+(k.avg_price>0?k.avg_price.toFixed(2)+' $':'-')+'</td>';
-    html+='<td style="font-weight:700;color:'+color+'">'+score+'</td>';
-    html+='<td><span style="background:rgba('+(score>=70?'34,197,94':score>=40?'251,191,36':'239,68,68')+',.15);color:'+color+';padding:4px 10px;border-radius:6px;font-size:.8rem;font-weight:600">'+badge+'</span></td>';
-    html+='</tr>';
-  });
-  html+='</tbody></table>';
-
-  document.getElementById('results').innerHTML=html;
-  window._kwData=data;
-
-  setTimeout(()=>{
-    const top15=kws.slice(0,15);
-    const labels=top15.map(k=>k.keyword.length>20?k.keyword.substring(0,20)+'...':k.keyword);
-    const scores=top15.map(k=>k.score);
-    const colors=top15.map(k=>k.score>=70?'rgba(34,197,94,.7)':k.score>=40?'rgba(251,191,36,.7)':'rgba(239,68,68,.7)');
-    destroyChart('chart-kw-scores');
-    const ctx=document.getElementById('chart-kw-scores');
-    if(ctx){
-      chartInstances['chart-kw-scores']=new Chart(ctx,{type:'bar',data:{labels:labels,datasets:[{label:'Score opportunite',data:scores,backgroundColor:colors,borderWidth:0}]},
-        options:{indexAxis:'y',responsive:true,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#aaa'},max:100},y:{ticks:{color:'#ccc',font:{size:11}}}}}
-      });
-    }
-  },100);
-}
-
-function filterKw(level) {
-  const rows=document.querySelectorAll('#kw-table tbody tr');
-  rows.forEach(r=>{
-    if(level==='all')r.style.display='';
-    else r.style.display=r.dataset.level===level?'':'none';
-  });
-}
-
-function exportKeywordsCsv() {
-  if(!window._kwData)return;
-  const rows=window._kwData.keywords.map(k=>({'Mot-cle':k.keyword,'Volume':k.volume,'Concurrence':k.competition,'Vendeurs':k.sellers,'Prix moyen':k.avg_price,'Score':k.score}));
-  downloadCsv(rows,'keywords_analysis.csv');
-}
-
-function createChart(canvasId, type, labels, data, label, color) {
-  destroyChart(canvasId);
-  const ctx=document.getElementById(canvasId);
-  if(!ctx)return;
-  chartInstances[canvasId]=new Chart(ctx,{type:type,data:{labels:labels,datasets:[{label:label,data:data,backgroundColor:color||'rgba(249,115,22,.6)',borderColor:'#F97316',borderWidth:1}]},
-    options:{responsive:true,plugins:{legend:{labels:{color:'#ccc'}}},scales:{x:{ticks:{color:'#aaa'}},y:{ticks:{color:'#aaa'},beginAtZero:true}}}
-  });
-}
-
-function renderCategoryResults(cat) {
-  const listings=cat.listings||[];
-  const stats=cat.price_stats||{};
-  const ranges=cat.price_ranges||{};
-  const keywords=cat.top_keywords||{};
-  const shops=cat.top_shops||{};
-
-  let html='<hr class="divider"><h2 style="color:#F97316">Resultats pour : "'+cat.query+'"</h2>';
-  html+='<div class="metrics"><div class="metric"><div class="metric-value">'+(cat.total_results?cat.total_results.toLocaleString():'N/A')+'</div><div class="metric-label">Resultats totaux</div></div>';
-  html+='<div class="metric"><div class="metric-value">'+cat.listings_count+'</div><div class="metric-label">Produits analyses</div></div>';
-  if(stats.avg)html+='<div class="metric"><div class="metric-value">'+stats.avg.toFixed(2)+' $</div><div class="metric-label">Prix moyen</div></div>';
-  html+='</div>';
-
-  html+='<div class="result-tabs">';
-  html+='<div class="result-tab active" onclick="switchResultTab(\'cat-products\',this)">Produits ('+listings.length+')</div>';
-  html+='<div class="result-tab" onclick="switchResultTab(\'cat-prices\',this)">Prix</div>';
-  html+='<div class="result-tab" onclick="switchResultTab(\'cat-keywords\',this)">Mots-cles</div>';
-  html+='<div class="result-tab" onclick="switchResultTab(\'cat-shops\',this)">Boutiques</div>';
-  html+='<div class="result-tab" onclick="switchResultTab(\'cat-export\',this)">Export</div>';
-  html+='</div>';
-
-  // Products tab
-  html+='<div class="result-panel active" id="cat-products">';
-  listings.forEach((item,i)=>{
-    html+='<div class="product-card">';
-    if(item.image_url)html+='<img src="'+item.image_url+'" alt="">';
-    html+='<div class="product-info"><div class="product-title">#'+item.position+' '+item.title+'</div><div class="product-meta">';
-    if(item.price>0)html+='<span>&#x1F4B0; '+item.price.toFixed(2)+' '+item.currency+'</span>';
-    if(item.rating)html+='<span>&#x2B50; '+item.rating+'</span>';
-    if(item.shop_name)html+='<span>&#x1F3EA; '+item.shop_name+'</span>';
-    html+='</div></div></div>';
-  });
-  html+='</div>';
-
-  // Prices tab
-  html+='<div class="result-panel" id="cat-prices">';
-  if(stats.avg){
-    html+='<div class="metrics"><div class="metric"><div class="metric-value">'+stats.avg.toFixed(2)+' $</div><div class="metric-label">Moyen</div></div>';
-    html+='<div class="metric"><div class="metric-value">'+stats.median.toFixed(2)+' $</div><div class="metric-label">Median</div></div>';
-    html+='<div class="metric"><div class="metric-value">'+stats.min.toFixed(2)+' $</div><div class="metric-label">Min</div></div>';
-    html+='<div class="metric"><div class="metric-value">'+stats.max.toFixed(2)+' $</div><div class="metric-label">Max</div></div></div>';
-  }
-  if(Object.keys(ranges).length){
-    html+='<div class="chart-container"><canvas id="chart-prices"></canvas></div>';
-    html+='<table><tr><th>Tranche</th><th>Nombre</th></tr>';
-    for(const[k,v]of Object.entries(ranges))html+='<tr><td>'+k+' $</td><td>'+v+'</td></tr>';
-    html+='</table>';
-  }
-  html+='</div>';
-
-  // Keywords tab
-  html+='<div class="result-panel" id="cat-keywords">';
-  if(Object.keys(keywords).length){
-    html+='<div class="chart-container"><canvas id="chart-keywords"></canvas></div>';
-    html+='<table><tr><th>Mot-cle</th><th>Frequence</th></tr>';
-    for(const[k,v]of Object.entries(keywords))html+='<tr><td>'+k+'</td><td>'+v+'</td></tr>';
-    html+='</table>';
-  }
-  html+='</div>';
-
-  // Shops tab
-  html+='<div class="result-panel" id="cat-shops">';
-  if(Object.keys(shops).length){
-    html+='<div class="chart-container"><canvas id="chart-shops"></canvas></div>';
-    html+='<table><tr><th>Boutique</th><th>Produits</th></tr>';
-    for(const[k,v]of Object.entries(shops))html+='<tr><td>'+k+'</td><td>'+v+'</td></tr>';
-    html+='</table>';
-  }
-  html+='</div>';
-
-  // Export tab
-  html+='<div class="result-panel" id="cat-export">';
-  html+='<button class="btn btn-dl" onclick="exportCategoryCsv()">Telecharger CSV</button>';
-  html+='</div>';
-
-  document.getElementById('results').innerHTML=html;
-
-  // Draw charts after DOM update
-  setTimeout(()=>{
-    const ro=["0-5","5-10","10-20","20-50","50-100","100+"];
-    const rl=[],rd=[];ro.forEach(k=>{if(ranges[k]!==undefined){rl.push(k+' $');rd.push(ranges[k])}});
-    if(rl.length)createChart('chart-prices','bar',rl,rd,'Nombre de produits');
-    const kl=Object.keys(keywords).slice(0,15),kd=kl.map(k=>keywords[k]);
-    if(kl.length)createChart('chart-keywords','bar',kl,kd,'Frequence','rgba(59,130,246,.6)');
-    const sl=Object.keys(shops).slice(0,10),sd=sl.map(k=>shops[k]);
-    if(sl.length)createChart('chart-shops','bar',sl,sd,'Produits','rgba(168,85,247,.6)');
-  },100);
-
-  window._catData=cat;
-}
-
-function renderShopResults(result) {
-  const shop=result.shop_info;
-  const listings=result.listings||[];
-  const reviews=result.reviews||[];
-  const tags=result.tags||{};
-  const monthly=result.monthly_sales_estimate||{};
-  const revMonths=result.reviews_by_month||{};
-  const revRatings=result.reviews_by_rating||{};
-  const prices=listings.filter(l=>l.price>0).map(l=>l.price);
-  const avgPrice=prices.length?prices.reduce((a,b)=>a+b,0)/prices.length:0;
-
-  let html='<hr class="divider"><div style="display:flex;gap:16px;align-items:center;margin-bottom:20px">';
-  if(shop.icon_url)html+='<img src="'+shop.icon_url+'" style="width:80px;height:80px;border-radius:50%;border:2px solid #F97316">';
-  html+='<div><h2 style="color:#F97316;margin-bottom:4px">'+shop.shop_name+'</h2>';
-  if(shop.title)html+='<p style="color:#aaa">'+shop.title+'</p>';
-  if(shop.shop_location)html+='<p style="color:#aaa">&#x1F4CD; '+shop.shop_location+'</p>';
-  if(shop.member_since)html+='<p style="color:#aaa">Sur Etsy depuis '+shop.member_since+'</p>';
-  html+='</div></div>';
-
-  html+='<div class="metrics">';
-  html+='<div class="metric"><div class="metric-value">'+shop.total_sales.toLocaleString()+'</div><div class="metric-label">Ventes totales</div></div>';
-  html+='<div class="metric"><div class="metric-value">'+shop.total_reviews.toLocaleString()+'</div><div class="metric-label">Avis</div></div>';
-  html+='<div class="metric"><div class="metric-value">'+(shop.star_rating||'N/A')+'</div><div class="metric-label">Note</div></div>';
-  html+='<div class="metric"><div class="metric-value">'+Math.round(result.estimated_revenue).toLocaleString()+' $</div><div class="metric-label">CA estime</div></div>';
-  html+='<div class="metric"><div class="metric-value">'+result.listings_count+'</div><div class="metric-label">Produits</div></div>';
-  html+='<div class="metric"><div class="metric-value">'+(shop.admirers||0).toLocaleString()+'</div><div class="metric-label">Admirateurs</div></div>';
-  html+='</div>';
-
-  html+='<p style="color:#888;font-size:.8rem;margin:10px 0">Les estimations sont basees sur une repartition moyenne sur la duree d\'activite de la boutique.</p>';
-
-  html+='<div class="result-tabs">';
-  html+='<div class="result-tab active" onclick="switchResultTab(\'shop-sales\',this)">Ventes & CA</div>';
-  html+='<div class="result-tab" onclick="switchResultTab(\'shop-reviews\',this)">Avis</div>';
-  html+='<div class="result-tab" onclick="switchResultTab(\'shop-tags\',this)">Tags</div>';
-  html+='<div class="result-tab" onclick="switchResultTab(\'shop-products\',this)">Produits</div>';
-  html+='<div class="result-tab" onclick="switchResultTab(\'shop-latest\',this)">Derniers avis</div>';
-  html+='<div class="result-tab" onclick="switchResultTab(\'shop-export\',this)">Export</div>';
-  html+='</div>';
-
-  // Sales tab
-  html+='<div class="result-panel active" id="shop-sales">';
-  if(Object.keys(monthly).length){
-    html+='<h3 class="section-title">Ventes mensuelles estimees</h3>';
-    html+='<div class="chart-container"><canvas id="chart-monthly"></canvas></div>';
-    if(avgPrice>0){
-      html+='<h3 class="section-title">CA estime par mois</h3>';
-      html+='<div class="chart-container"><canvas id="chart-revenue"></canvas></div>';
-    }
-    if(prices.length){
-      html+='<h3 class="section-title">Statistiques de prix</h3><div class="metrics">';
-      html+='<div class="metric"><div class="metric-value">'+avgPrice.toFixed(2)+' $</div><div class="metric-label">Moyen</div></div>';
-      const sorted=[...prices].sort((a,b)=>a-b);
-      html+='<div class="metric"><div class="metric-value">'+sorted[Math.floor(sorted.length/2)].toFixed(2)+' $</div><div class="metric-label">Median</div></div>';
-      html+='<div class="metric"><div class="metric-value">'+Math.min(...prices).toFixed(2)+' $</div><div class="metric-label">Min</div></div>';
-      html+='<div class="metric"><div class="metric-value">'+Math.max(...prices).toFixed(2)+' $</div><div class="metric-label">Max</div></div></div>';
-    }
-  } else html+='<div class="info-msg">Pas de donnees de ventes.</div>';
-  html+='</div>';
-
-  // Reviews tab
-  html+='<div class="result-panel" id="shop-reviews">';
-  if(Object.keys(revMonths).length){
-    html+='<h3 class="section-title">Avis par mois</h3><div class="chart-container"><canvas id="chart-rev-months"></canvas></div>';
-  }
-  if(Object.keys(revRatings).length){
-    html+='<h3 class="section-title">Repartition par note</h3><div class="chart-container"><canvas id="chart-rev-ratings"></canvas></div>';
-  }
-  if(!Object.keys(revMonths).length&&!Object.keys(revRatings).length)html+='<div class="info-msg">Pas de donnees d\'avis.</div>';
-  html+='</div>';
-
-  // Tags tab
-  html+='<div class="result-panel" id="shop-tags">';
-  if(Object.keys(tags).length){
-    const topTags=Object.fromEntries(Object.entries(tags).slice(0,25));
-    html+='<div class="chart-container"><canvas id="chart-tags"></canvas></div>';
-    html+='<table><tr><th>Tag</th><th>Frequence</th></tr>';
-    for(const[k,v]of Object.entries(topTags))html+='<tr><td>'+k+'</td><td>'+v+'</td></tr>';
-    html+='</table>';
-  } else html+='<div class="info-msg">Aucun tag trouve.</div>';
-  html+='</div>';
-
-  // Products tab
-  html+='<div class="result-panel" id="shop-products">';
-  if(listings.length){
-    html+='<table><tr><th>Titre</th><th>Prix</th><th>Tags</th></tr>';
-    listings.forEach(l=>{
-      html+='<tr><td>'+l.title.substring(0,80)+'</td><td>'+l.price.toFixed(2)+' '+l.currency+'</td><td>'+(l.tags||[]).slice(0,5).join(', ')+'</td></tr>';
-    });
-    html+='</table>';
-  } else html+='<div class="info-msg">Aucun produit.</div>';
-  html+='</div>';
-
-  // Latest reviews tab
-  html+='<div class="result-panel" id="shop-latest">';
-  if(reviews.length){
-    reviews.slice(0,30).forEach(r=>{
-      html+='<div class="review-card"><div class="review-date">'+(r.date_text||'N/A')+'</div>';
-      if(r.rating)html+='<div class="review-stars">'+'&#x2B50;'.repeat(r.rating)+'</div>';
-      html+='<div class="review-text">'+(r.text||'Pas de commentaire')+'</div></div>';
-    });
-  } else html+='<div class="info-msg">Aucun avis.</div>';
-  html+='</div>';
-
-  // Export tab
-  html+='<div class="result-panel" id="shop-export">';
-  html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">';
-  html+='<button class="btn btn-dl" onclick="exportShopProducts()">Telecharger produits (CSV)</button>';
-  html+='<button class="btn btn-dl" onclick="exportShopReviews()">Telecharger avis (CSV)</button></div>';
-  html+='</div>';
-
-  document.getElementById('results').innerHTML=html;
-
-  setTimeout(()=>{
-    const ml=Object.keys(monthly),md=Object.values(monthly);
-    if(ml.length)createChart('chart-monthly','bar',ml,md,'Ventes estimees');
-    if(avgPrice>0&&ml.length){const rd=md.map(v=>Math.round(v*avgPrice));createChart('chart-revenue','bar',ml,rd,'CA estime ($)','rgba(59,130,246,.6)');}
-    const rml=Object.keys(revMonths),rmd=Object.values(revMonths);
-    if(rml.length)createChart('chart-rev-months','bar',rml,rmd,'Avis','rgba(34,197,94,.6)');
-    const rrl=Object.keys(revRatings).map(k=>'&#x2B50; '+k),rrd=Object.values(revRatings);
-    if(rrl.length)createChart('chart-rev-ratings','bar',rrl,rrd,'Nombre','rgba(251,191,36,.6)');
-    const tl=Object.keys(tags).slice(0,25),td=tl.map(k=>tags[k]);
-    if(tl.length)createChart('chart-tags','bar',tl,td,'Frequence','rgba(168,85,247,.6)');
-  },100);
-
-  window._shopData=result;
-}
-
-function switchResultTab(panelId, btn) {
-  const parent=btn.parentElement;
-  parent.querySelectorAll('.result-tab').forEach(t=>t.classList.remove('active'));
-  btn.classList.add('active');
-  let panel=document.getElementById(panelId);
-  let sibling=panel.parentElement.querySelectorAll('.result-panel');
-  sibling.forEach(p=>p.classList.remove('active'));
-  panel.classList.add('active');
-}
-
-function exportCategoryCsv() {
-  if(!window._catData)return;
-  const rows=window._catData.listings.map(l=>({Position:l.position,Titre:l.title,Prix:l.price,Devise:l.currency,Note:l.rating||'',Boutique:l.shop_name||''}));
-  downloadCsv(rows,'etsy_category.csv');
-}
-function exportShopProducts() {
-  if(!window._shopData)return;
-  const rows=window._shopData.listings.map(l=>({Titre:l.title,Prix:l.price,Devise:l.currency,Tags:(l.tags||[]).join('|')}));
-  downloadCsv(rows,window._shopData.shop_info.shop_name+'_produits.csv');
-}
-function exportShopReviews() {
-  if(!window._shopData)return;
-  const rows=window._shopData.reviews.map(r=>({Date:r.date_text||'',Note:r.rating||'',Texte:r.text||''}));
-  downloadCsv(rows,window._shopData.shop_info.shop_name+'_avis.csv');
-}
-function downloadCsv(rows,filename) {
-  if(!rows.length)return;
-  const headers=Object.keys(rows[0]);
-  let csv=headers.join(',')+'\n';
-  rows.forEach(r=>{csv+=headers.map(h=>'"'+(String(r[h]||'')).replace(/"/g,'""')+'"').join(',')+'\n'});
-  const blob=new Blob([csv],{type:'text/csv'});
-  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=filename;a.click();
-}
 </script>
+
+<div class="panel">
+<h1>ULTRA REALISM AI</h1>
+
+<textarea placeholder="Décris ton image ultra réaliste..."></textarea>
+
+<button>Générer Image</button>
+
+<img id="result"/>
+</div>
+
 </body>
 </html>
