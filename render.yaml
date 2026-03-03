@@ -1,9 +1,0 @@
-services:
-  - type: web
-    name: etsy-ai-v2
-    runtime: docker
-    envVars:
-      - key: SCRAPERAPI_KEY
-        sync: false
-      - key: PORT
-        value: "10000"
